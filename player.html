@@ -28,6 +28,7 @@
       --radius-md: 18px;
       --cell-size: min(8vw, 38px);
       --label-size: min(7vw, 30px);
+      --board-gap: 4px;
     }
 
     * {
@@ -167,13 +168,15 @@
       border-radius: var(--radius-lg);
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.04);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .board {
       display: grid;
       grid-template-columns: var(--label-size) repeat(10, var(--cell-size));
       grid-template-rows: var(--label-size) repeat(10, var(--cell-size));
-      gap: 4px;
+      gap: var(--board-gap);
       width: fit-content;
       margin: 0 auto;
       user-select: none;
@@ -187,6 +190,7 @@
       align-items: center;
       justify-content: center;
       border-radius: 12px;
+      min-width: 0;
     }
 
     .corner,
@@ -463,24 +467,102 @@
       .layout {
         grid-template-columns: 1fr;
       }
-
-      .sidebar {
-        order: -1;
-      }
     }
 
     @media (max-width: 640px) {
       body {
-        padding: 14px;
+        padding: 8px;
       }
 
       .card {
-        padding: 22px 16px;
+        padding: 18px 10px;
+        border-radius: 22px;
+      }
+
+      .board-shell,
+      .panel {
+        padding: 12px 8px;
+        border-radius: 18px;
+      }
+
+      .layout,
+      .screen,
+      .sidebar {
+        gap: 14px;
+      }
+
+      .helper,
+      .instruction,
+      .subtitle,
+      .status-note,
+      .winner {
+        font-size: 0.94rem;
+      }
+
+      .section-title {
+        font-size: 1.12rem;
+      }
+
+      .legend {
+        gap: 8px;
+      }
+
+      .legend-item {
+        padding: 8px 10px;
+        font-size: 0.86rem;
+      }
+
+      .ship-button {
+        padding: 12px 14px;
       }
 
       :root {
-        --cell-size: min(7.4vw, 32px);
-        --label-size: min(7vw, 28px);
+        --board-gap: 2px;
+        --cell-size: clamp(22px, calc((100vw - 84px) / 11), 29px);
+        --label-size: clamp(18px, calc((100vw - 84px) / 14), 24px);
+      }
+
+      .board {
+        margin: 0;
+      }
+
+      .corner,
+      .axis-label {
+        font-size: 0.72rem;
+      }
+
+      .cell,
+      .axis-label,
+      .corner {
+        border-radius: 9px;
+      }
+
+      .cell.hit::before,
+      .cell.enemy-hit::before,
+      .cell.enemy-target::before {
+        font-size: 0.8rem;
+      }
+
+      .cell.miss::after,
+      .cell.enemy-miss::after {
+        width: 6px;
+        height: 6px;
+      }
+    }
+
+    @media (max-width: 390px) {
+      :root {
+        --cell-size: clamp(20px, calc((100vw - 72px) / 11), 26px);
+        --label-size: clamp(16px, calc((100vw - 72px) / 15), 21px);
+      }
+
+      .card {
+        padding: 16px 8px;
+      }
+
+      .board-shell,
+      .panel {
+        padding: 10px 6px;
       }
     }
 
