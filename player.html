@@ -530,7 +530,7 @@
             <div class="status-banner">
               <div class="status-head">
                 <strong id="status-title">Place your ships</strong>
-                <button class="secondary-btn status-rotate-btn" id="rotate-btn" type="button">Rotate: Horizontal</button>
+                <button class="primary-btn status-rotate-btn" id="rotate-btn" type="button">Rotate: Horizontal</button>
               </div>
               <div class="status-note" id="status-note">Select a ship, place all 5 on the board, then lock them with the ready button.</div>
               <div class="winner" id="winner-text"></div>
@@ -618,6 +618,7 @@
       selectedEnemyCell: null,
       enemyAttacks: new Set(),
       enemyAttackMisses: new Set(),
+      gameOverShown: false,
       placements: buildPlacements()
     };
 
@@ -819,6 +820,7 @@
       state.selectedEnemyCell = null;
       state.enemyAttacks = new Set();
       state.enemyAttackMisses = new Set();
+      state.gameOverShown = false;
       winnerText.innerText = "";
       updateStatus();
       updateActionButtons();
@@ -870,8 +872,15 @@
 
       if (allShipsSunk()) {
         winnerText.innerText = `${playerName} has lost all ships. ${opponentName} wins this round.`;
+        if (!state.gameOverShown) {
+          state.gameOverShown = true;
+          window.setTimeout(() => {
+            alert(`GAME OVER\nYour whole fleet has been destroyed.\n${opponentName} wins.`);
+          }, 120);
+        }
       } else {
         winnerText.innerText = "";
+        state.gameOverShown = false;
       }
     }
 
