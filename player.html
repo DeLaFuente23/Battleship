@@ -334,6 +334,10 @@
       margin-top: 14px;
     }
 
+    .board-actions.hidden {
+      display: none;
+    }
+
     button {
       border: 0;
       border-radius: 999px;
@@ -362,6 +366,13 @@
       background: rgba(255, 255, 255, 0.08);
       color: var(--text);
       border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .jump-btn {
+      min-width: 52px;
+      padding: 14px 0;
+      font-size: 1.2rem;
+      line-height: 1;
     }
 
     .status-banner {
@@ -512,8 +523,9 @@
             <h2 class="section-title">Your fleet</h2>
             <p class="helper">Tap one ship on the right, then tap the board to place it. Use the rotate button before placing. After both players are ready, keep using this board to mark the coordinates your opponent calls out.</p>
             <div class="board" id="own-board" aria-label="Your Battleship grid"></div>
-            <div class="board-actions">
+            <div class="board-actions hidden" id="own-board-actions">
               <button class="primary-btn" id="confirm-own-hit-btn" type="button" disabled>Confirm enemy hit on my board</button>
+              <button class="secondary-btn jump-btn" id="scroll-down-btn" type="button" aria-label="Scroll to enemy board">↓</button>
             </div>
             <div class="status-banner">
               <div class="status-head">
@@ -557,6 +569,7 @@
         <div class="board" id="enemy-board" aria-label="Enemy Battleship grid"></div>
         <div class="board-actions">
           <button class="primary-btn" id="confirm-enemy-attack-btn" type="button" disabled>Attack selected coordinate</button>
+          <button class="secondary-btn jump-btn" id="scroll-up-btn" type="button" aria-label="Scroll to your fleet">↑</button>
         </div>
       </div>
     </section>
@@ -584,8 +597,11 @@
     const rotateButton = document.getElementById("rotate-btn");
     const resetButton = document.getElementById("reset-btn");
     const readyButton = document.getElementById("ready-btn");
+    const ownBoardActions = document.getElementById("own-board-actions");
     const confirmOwnHitButton = document.getElementById("confirm-own-hit-btn");
     const confirmEnemyAttackButton = document.getElementById("confirm-enemy-attack-btn");
+    const scrollDownButton = document.getElementById("scroll-down-btn");
+    const scrollUpButton = document.getElementById("scroll-up-btn");
     const statusTitle = document.getElementById("status-title");
     const statusNote = document.getElementById("status-note");
     const winnerText = document.getElementById("winner-text");
@@ -601,6 +617,7 @@
       selectedOwnCell: null,
       selectedEnemyCell: null,
       enemyAttacks: new Set(),
+      enemyAttackMisses: new Set(),
       placements: buildPlacements()
     };
 
@@ -729,8 +746,15 @@
       const ship = getShipAt(row, col);
 
       if (!ship) {
-        statusTitle.innerText = "No ship on that square";
-        statusNote.innerText = "Select a square that belongs to one of your ships before confirming an enemy hit.";
+        if (state.enemyAttackMisses.has(coordinate)) {
+          state.enemyAttackMisses.delete(coordinate);
+          statusTitle.innerText = "Enemy miss removed";
+          statusNote.innerText = `The attack at ${LETTERS[col]}${row + 1} is no longer marked on your board.`;
+        } else {
+          state.enemyAttackMisses.add(coordinate);
+          statusTitle.innerText = "Enemy miss logged";
+          statusNote.innerText = `The attack at ${LETTERS[col]}${row + 1} is now marked on your board as part of the attack history.`;
+        }
         state.selectedOwnCell = null;
         updateActionButtons();
         renderBoards();
@@ -794,6 +818,7 @@
       state.selectedOwnCell = null;
       state.selectedEnemyCell = null;
       state.enemyAttacks = new Set();
+      state.enemyAttackMisses = new Set();
       winnerText.innerText = "";
       updateStatus();
       updateActionButtons();
@@ -813,6 +838,7 @@
       readyButton.innerText = "Fleet locked";
       rotateButton.disabled = true;
       resetButton.disabled = true;
+      ownBoardActions.classList.remove("hidden");
       updateStatus();
       updateActionButtons();
       renderShipList();
@@ -853,6 +879,7 @@
       const ownSelectionReady = state.locked && state.selectedOwnCell !== null;
       const enemySelectionReady = state.locked && state.selectedEnemyCell !== null;
 
+      ownBoardActions.classList.toggle("hidden", !state.locked);
       confirmOwnHitButton.disabled = !ownSelectionReady;
       confirmEnemyAttackButton.disabled = !enemySelectionReady;
     }
@@ -913,6 +940,10 @@
             if (placement.hits.size === placement.size) {
               ownCell.classList.add("lost");
             }
+          }
+
+          if (state.enemyAttackMisses.has(coordinate) && !ship) {
+            ownCell.classList.add("logged-attack");
           }
 
           if (state.selectedOwnCell && state.selectedOwnCell.row === row && state.selectedOwnCell.col === col) {
@@ -985,6 +1016,18 @@
     readyButton.addEventListener("click", lockShips);
     confirmOwnHitButton.addEventListener("click", confirmOwnHit);
     confirmEnemyAttackButton.addEventListener("click", confirmEnemyAttack);
+    scrollDownButton.addEventListener("click", () => {
+      document.getElementById("enemy-section").scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    });
+    scrollUpButton.addEventListener("click", () => {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    });
 
     updateStatus();
     updateActionButtons();
