@@ -229,16 +229,6 @@
       box-shadow: inset 0 0 0 1px rgba(228, 246, 255, 0.1);
     }
 
-    .cell.preview-valid {
-      outline: 2px solid rgba(129, 227, 176, 0.8);
-      outline-offset: -2px;
-    }
-
-    .cell.preview-invalid {
-      outline: 2px solid rgba(255, 116, 116, 0.8);
-      outline-offset: -2px;
-    }
-
     .cell.miss::after,
     .cell.enemy-miss::after {
       content: "";
@@ -388,10 +378,22 @@
       background: rgba(255, 255, 255, 0.04);
     }
 
-    .status-banner strong {
-      display: block;
+    .status-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       margin-bottom: 4px;
+    }
+
+    .status-banner strong {
       font-size: 1rem;
+    }
+
+    .status-rotate-btn {
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      white-space: nowrap;
     }
 
     .scroll-cue {
@@ -512,6 +514,15 @@
         font-size: 0.86rem;
       }
 
+      .status-head {
+        align-items: flex-start;
+      }
+
+      .status-rotate-btn {
+        padding: 9px 12px;
+        font-size: 0.82rem;
+      }
+
       .ship-button {
         padding: 12px 14px;
       }
@@ -591,7 +602,10 @@
             <p class="helper">Tap one ship on the right, then tap the board to place it. Use the rotate button before placing. After both players are ready, keep using this board to mark the coordinates your opponent calls out.</p>
             <div class="board" id="own-board" aria-label="Your Battleship grid"></div>
             <div class="status-banner">
-              <strong id="status-title">Place your ships</strong>
+              <div class="status-head">
+                <strong id="status-title">Place your ships</strong>
+                <button class="secondary-btn status-rotate-btn" id="rotate-btn" type="button">Rotate: Horizontal</button>
+              </div>
               <div class="status-note" id="status-note">Select a ship, place all 5 on the board, then lock them with the ready button.</div>
               <div class="winner" id="winner-text"></div>
             </div>
@@ -604,7 +618,6 @@
             <p class="instruction">All ships must fit inside the 10x10 board and cannot overlap.</p>
             <div class="ship-list" id="ship-list"></div>
             <div class="controls">
-              <button class="secondary-btn" id="rotate-btn" type="button">Rotate: Horizontal</button>
               <button class="secondary-btn" id="reset-btn" type="button">Reset ships</button>
               <button class="primary-btn" id="ready-btn" type="button">I'm ready</button>
             </div>
@@ -886,7 +899,7 @@
       }
     }
 
-    function createBoardGrid(container, onCellClick, options = {}) {
+    function createBoardGrid(container, onCellClick) {
       container.innerHTML = "";
 
       const corner = document.createElement("div");
@@ -915,23 +928,13 @@
           cell.setAttribute("aria-label", `${LETTERS[col]}${row + 1}`);
           cell.addEventListener("click", () => onCellClick(row, col));
 
-          if (options.previewShipId && !state.locked) {
-            const preview = canPlaceShip(options.previewShipId, row, col);
-            if (preview.cells.length > 0) {
-              const includesOrigin = preview.cells.some((item) => item.row === row && item.col === col);
-              if (includesOrigin) {
-                cell.classList.add(preview.valid ? "preview-valid" : "preview-invalid");
-              }
-            }
-          }
-
           container.appendChild(cell);
         }
       }
     }
 
     function renderBoards() {
-      createBoardGrid(ownBoard, placeShip, { previewShipId: state.selectedShipId });
+      createBoardGrid(ownBoard, placeShip);
       createBoardGrid(enemyBoard, cycleEnemyMark);
 
       for (let row = 0; row < GRID_SIZE; row += 1) {
