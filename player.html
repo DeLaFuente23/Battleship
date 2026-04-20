@@ -21,7 +21,6 @@
       --ship: #6bc5ff;
       --ship-hit: rgba(255, 125, 99, 0.82);
       --ship-lost: rgba(255, 125, 99, 0.28);
-      --enemy-target: rgba(255, 152, 80, 0.78);
       --glow: 0 30px 80px rgba(0, 0, 0, 0.4);
       --radius-xl: 32px;
       --radius-lg: 24px;
@@ -142,7 +141,6 @@
     .helper,
     .status-note,
     .instruction,
-    .legend-item span,
     .ship-meta,
     .winner {
       color: var(--muted);
@@ -229,16 +227,6 @@
       box-shadow: inset 0 0 0 1px rgba(228, 246, 255, 0.1);
     }
 
-    .cell.miss::after,
-    .cell.enemy-miss::after {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--miss);
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
-    }
-
     .cell.hit {
       background:
         linear-gradient(180deg, rgba(255, 125, 99, 0.78), rgba(137, 42, 39, 0.92)),
@@ -246,8 +234,7 @@
     }
 
     .cell.hit::before,
-    .cell.enemy-hit::before,
-    .cell.enemy-target::before {
+    .cell.logged-attack::before {
       content: "X";
       font-size: 0.95rem;
       color: white;
@@ -267,16 +254,16 @@
         rgba(7, 20, 36, 0.92);
     }
 
-    .cell.enemy-target {
-      background:
-        linear-gradient(180deg, rgba(255, 152, 80, 0.72), rgba(151, 76, 35, 0.9)),
-        rgba(7, 20, 36, 0.92);
-    }
-
-    .cell.enemy-hit {
+    .cell.logged-attack {
       background:
         linear-gradient(180deg, rgba(255, 125, 99, 0.8), rgba(150, 43, 40, 0.94)),
         rgba(7, 20, 36, 0.92);
+    }
+
+    .cell.selected-target {
+      outline: 2px solid rgba(255, 152, 80, 0.85);
+      outline-offset: -2px;
+      box-shadow: inset 0 0 0 1px rgba(255, 240, 220, 0.1);
     }
 
     .sidebar {
@@ -340,6 +327,13 @@
       margin-top: 14px;
     }
 
+    .board-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
     button {
       border: 0;
       border-radius: 999px;
@@ -396,68 +390,9 @@
       white-space: nowrap;
     }
 
-    .scroll-cue {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      width: fit-content;
-      margin: 2px auto 0;
-      padding: 10px 18px;
-      background: transparent;
-      color: var(--cool);
-      border: 1px dashed rgba(107, 197, 255, 0.34);
-      animation: floatCue 1.3s ease-in-out infinite;
-    }
-
-    .scroll-cue.visible {
-      display: inline-flex;
-    }
-
-    .scroll-cue strong {
-      font-size: 1.35rem;
-      line-height: 1;
-    }
-
     .attack-section {
       display: grid;
       gap: 18px;
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 14px;
-    }
-
-    .legend-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .legend-swatch {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .swatch-target {
-      background: var(--enemy-target);
-    }
-
-    .swatch-miss {
-      background: var(--miss);
-    }
-
-    .swatch-hit {
-      background: var(--hit);
     }
 
     .winner {
@@ -505,15 +440,6 @@
         font-size: 1.12rem;
       }
 
-      .legend {
-        gap: 8px;
-      }
-
-      .legend-item {
-        padding: 8px 10px;
-        font-size: 0.86rem;
-      }
-
       .status-head {
         align-items: flex-start;
       }
@@ -549,16 +475,10 @@
       }
 
       .cell.hit::before,
-      .cell.enemy-hit::before,
-      .cell.enemy-target::before {
+      .cell.logged-attack::before {
         font-size: 0.8rem;
       }
 
-      .cell.miss::after,
-      .cell.enemy-miss::after {
-        width: 6px;
-        height: 6px;
-      }
     }
 
     @media (max-width: 390px) {
@@ -577,15 +497,6 @@
       }
     }
 
-    @keyframes floatCue {
-      0%, 100% {
-        transform: translateY(0);
-      }
-
-      50% {
-        transform: translateY(4px);
-      }
-    }
   </style>
 </head>
 <body>
@@ -601,6 +512,9 @@
             <h2 class="section-title">Your fleet</h2>
             <p class="helper">Tap one ship on the right, then tap the board to place it. Use the rotate button before placing. After both players are ready, keep using this board to mark the coordinates your opponent calls out.</p>
             <div class="board" id="own-board" aria-label="Your Battleship grid"></div>
+            <div class="board-actions">
+              <button class="primary-btn" id="confirm-own-hit-btn" type="button" disabled>Confirm enemy hit on my board</button>
+            </div>
             <div class="status-banner">
               <div class="status-head">
                 <strong id="status-title">Place your ships</strong>
@@ -625,31 +539,24 @@
 
           <section class="panel">
             <h3 class="section-title">How the marks work</h3>
-            <p class="instruction">On your own board after setup: tapping water marks a miss, tapping one of your ships marks a hit, and sunk ships fade automatically.</p>
-            <p class="instruction">On the enemy board: taps cycle through attack marker, miss, hit, then clear, so you can track the battle manually.</p>
+            <p class="instruction">After setup, the top board is only for confirming enemy hits on your ships.</p>
+            <p class="instruction">The enemy board below is only for logging the coordinates you have already attacked.</p>
           </section>
         </aside>
       </div>
     </section>
 
-    <button class="scroll-cue" id="scroll-cue" type="button">
-      <span>Show enemy grid</span>
-      <strong>&darr;</strong>
-    </button>
-
     <section class="card attack-section" id="enemy-section">
       <div>
         <span class="badge">Attack Board</span>
         <h2 id="enemy-title"></h2>
-        <p class="subtitle">Pick a coordinate to attack, tell it to your opponent, then update the marker based on what they tell you.</p>
+        <p class="subtitle">Pick a coordinate, press attack to lock it in, tell it to your opponent, then go back up and confirm the hit they tell you on your own board.</p>
       </div>
 
       <div class="board-shell">
         <div class="board" id="enemy-board" aria-label="Enemy Battleship grid"></div>
-        <div class="legend">
-          <div class="legend-item"><span class="legend-swatch swatch-target"></span><span>Current attack</span></div>
-          <div class="legend-item"><span class="legend-swatch swatch-miss"></span><span>Miss</span></div>
-          <div class="legend-item"><span class="legend-swatch swatch-hit"></span><span>Hit</span></div>
+        <div class="board-actions">
+          <button class="primary-btn" id="confirm-enemy-attack-btn" type="button" disabled>Attack selected coordinate</button>
         </div>
       </div>
     </section>
@@ -677,7 +584,8 @@
     const rotateButton = document.getElementById("rotate-btn");
     const resetButton = document.getElementById("reset-btn");
     const readyButton = document.getElementById("ready-btn");
-    const scrollCue = document.getElementById("scroll-cue");
+    const confirmOwnHitButton = document.getElementById("confirm-own-hit-btn");
+    const confirmEnemyAttackButton = document.getElementById("confirm-enemy-attack-btn");
     const statusTitle = document.getElementById("status-title");
     const statusNote = document.getElementById("status-note");
     const winnerText = document.getElementById("winner-text");
@@ -690,14 +598,11 @@
       orientation: "horizontal",
       selectedShipId: SHIPS[0].id,
       locked: false,
-      ownMarks: createMatrix(null),
-      enemyMarks: createMatrix(null),
+      selectedOwnCell: null,
+      selectedEnemyCell: null,
+      enemyAttacks: new Set(),
       placements: buildPlacements()
     };
-
-    function createMatrix(fillValue) {
-      return Array.from({ length: GRID_SIZE }, () => Array.from({ length: GRID_SIZE }, () => fillValue));
-    }
 
     function buildPlacements() {
       return SHIPS.reduce((accumulator, ship) => {
@@ -775,7 +680,7 @@
 
     function placeShip(row, col) {
       if (state.locked) {
-        markOwnBoard(row, col);
+        selectOwnCell(row, col);
         return;
       }
 
@@ -806,33 +711,76 @@
       renderBoards();
     }
 
-    function markOwnBoard(row, col) {
+    function selectOwnCell(row, col) {
+      state.selectedOwnCell = state.selectedOwnCell && state.selectedOwnCell.row === row && state.selectedOwnCell.col === col
+        ? null
+        : { row, col };
+      updateActionButtons();
+      renderBoards();
+    }
+
+    function confirmOwnHit() {
+      if (!state.locked || !state.selectedOwnCell) {
+        return;
+      }
+
+      const { row, col } = state.selectedOwnCell;
       const coordinate = `${row},${col}`;
       const ship = getShipAt(row, col);
 
       if (!ship) {
-        state.ownMarks[row][col] = state.ownMarks[row][col] === "miss" ? null : "miss";
+        statusTitle.innerText = "No ship on that square";
+        statusNote.innerText = "Select a square that belongs to one of your ships before confirming an enemy hit.";
+        state.selectedOwnCell = null;
+        updateActionButtons();
         renderBoards();
         return;
       }
 
       const placement = state.placements[ship.id];
-
       if (placement.hits.has(coordinate)) {
         placement.hits.delete(coordinate);
       } else {
         placement.hits.add(coordinate);
       }
 
+      state.selectedOwnCell = null;
       updateStatus();
+      updateActionButtons();
       renderShipList();
       renderBoards();
     }
 
-    function cycleEnemyMark(row, col) {
-      const current = state.enemyMarks[row][col];
-      const next = current === null ? "target" : current === "target" ? "miss" : current === "miss" ? "hit" : null;
-      state.enemyMarks[row][col] = next;
+    function selectEnemyCell(row, col) {
+      state.selectedEnemyCell = state.selectedEnemyCell && state.selectedEnemyCell.row === row && state.selectedEnemyCell.col === col
+        ? null
+        : { row, col };
+      updateActionButtons();
+      renderBoards();
+    }
+
+    function confirmEnemyAttack() {
+      if (!state.locked || !state.selectedEnemyCell) {
+        return;
+      }
+
+      const { row, col } = state.selectedEnemyCell;
+      const coordinate = `${row},${col}`;
+
+      if (state.enemyAttacks.has(coordinate)) {
+        statusTitle.innerText = "That attack is already logged";
+        statusNote.innerText = "Choose another square on the enemy board for your next attack.";
+        state.selectedEnemyCell = null;
+        updateActionButtons();
+        renderBoards();
+        return;
+      }
+
+      state.enemyAttacks.add(coordinate);
+      state.selectedEnemyCell = null;
+      statusTitle.innerText = "Attack logged";
+      statusNote.innerText = `Your attack on ${LETTERS[col]}${row + 1} is locked in. Wait for ${opponentName} to tell you the result, then confirm their attack on your own board.`;
+      updateActionButtons();
       renderBoards();
     }
 
@@ -843,10 +791,12 @@
 
       state.placements = buildPlacements();
       state.selectedShipId = SHIPS[0].id;
-      state.ownMarks = createMatrix(null);
-      state.enemyMarks = createMatrix(null);
+      state.selectedOwnCell = null;
+      state.selectedEnemyCell = null;
+      state.enemyAttacks = new Set();
       winnerText.innerText = "";
       updateStatus();
+      updateActionButtons();
       renderShipList();
       renderBoards();
     }
@@ -863,8 +813,8 @@
       readyButton.innerText = "Fleet locked";
       rotateButton.disabled = true;
       resetButton.disabled = true;
-      scrollCue.classList.add("visible");
       updateStatus();
+      updateActionButtons();
       renderShipList();
       renderBoards();
     }
@@ -897,6 +847,14 @@
       } else {
         winnerText.innerText = "";
       }
+    }
+
+    function updateActionButtons() {
+      const ownSelectionReady = state.locked && state.selectedOwnCell !== null;
+      const enemySelectionReady = state.locked && state.selectedEnemyCell !== null;
+
+      confirmOwnHitButton.disabled = !ownSelectionReady;
+      confirmEnemyAttackButton.disabled = !enemySelectionReady;
     }
 
     function createBoardGrid(container, onCellClick) {
@@ -935,20 +893,18 @@
 
     function renderBoards() {
       createBoardGrid(ownBoard, placeShip);
-      createBoardGrid(enemyBoard, cycleEnemyMark);
+      createBoardGrid(enemyBoard, selectEnemyCell);
 
       for (let row = 0; row < GRID_SIZE; row += 1) {
         for (let col = 0; col < GRID_SIZE; col += 1) {
           const ownCell = ownBoard.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
           const enemyCell = enemyBoard.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
           const ship = getShipAt(row, col);
-          const mark = state.ownMarks[row][col];
-          const enemyMark = state.enemyMarks[row][col];
+          const coordinate = `${row},${col}`;
 
           if (ship) {
             ownCell.classList.add("ship");
             const placement = state.placements[ship.id];
-            const coordinate = `${row},${col}`;
 
             if (placement.hits.has(coordinate)) {
               ownCell.classList.add("hit");
@@ -957,16 +913,18 @@
             if (placement.hits.size === placement.size) {
               ownCell.classList.add("lost");
             }
-          } else if (mark === "miss") {
-            ownCell.classList.add("miss");
           }
 
-          if (enemyMark === "target") {
-            enemyCell.classList.add("enemy-target");
-          } else if (enemyMark === "miss") {
-            enemyCell.classList.add("enemy-miss");
-          } else if (enemyMark === "hit") {
-            enemyCell.classList.add("enemy-hit");
+          if (state.selectedOwnCell && state.selectedOwnCell.row === row && state.selectedOwnCell.col === col) {
+            ownCell.classList.add("selected-target");
+          }
+
+          if (state.enemyAttacks.has(coordinate)) {
+            enemyCell.classList.add("logged-attack");
+          }
+
+          if (state.selectedEnemyCell && state.selectedEnemyCell.row === row && state.selectedEnemyCell.col === col) {
+            enemyCell.classList.add("selected-target");
           }
         }
       }
@@ -1025,14 +983,11 @@
 
     resetButton.addEventListener("click", resetShips);
     readyButton.addEventListener("click", lockShips);
-    scrollCue.addEventListener("click", () => {
-      document.getElementById("enemy-section").scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
-    });
+    confirmOwnHitButton.addEventListener("click", confirmOwnHit);
+    confirmEnemyAttackButton.addEventListener("click", confirmEnemyAttack);
 
     updateStatus();
+    updateActionButtons();
     renderShipList();
     renderBoards();
   </script>
