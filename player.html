@@ -260,6 +260,12 @@
         rgba(7, 20, 36, 0.92);
     }
 
+    .cell.logged-attack.missed-attack {
+      background:
+        linear-gradient(180deg, rgba(152, 167, 189, 0.82), rgba(82, 94, 115, 0.94)),
+        rgba(7, 20, 36, 0.92);
+    }
+
     .cell.selected-target {
       outline: 2px solid rgba(255, 152, 80, 0.85);
       outline-offset: -2px;
@@ -616,7 +622,7 @@
       locked: false,
       selectedOwnCell: null,
       selectedEnemyCell: null,
-      enemyAttacks: new Set(),
+      enemyAttacks: new Map(),
       enemyAttackMisses: new Set(),
       gameOverShown: false,
       placements: buildPlacements()
@@ -777,6 +783,15 @@
     }
 
     function selectEnemyCell(row, col) {
+      const coordinate = `${row},${col}`;
+
+      if (state.enemyAttacks.has(coordinate)) {
+        const current = state.enemyAttacks.get(coordinate);
+        state.enemyAttacks.set(coordinate, current === "hit" ? "miss" : "hit");
+        renderBoards();
+        return;
+      }
+
       state.selectedEnemyCell = state.selectedEnemyCell && state.selectedEnemyCell.row === row && state.selectedEnemyCell.col === col
         ? null
         : { row, col };
@@ -792,19 +807,10 @@
       const { row, col } = state.selectedEnemyCell;
       const coordinate = `${row},${col}`;
 
-      if (state.enemyAttacks.has(coordinate)) {
-        statusTitle.innerText = "That attack is already logged";
-        statusNote.innerText = "Choose another square on the enemy board for your next attack.";
-        state.selectedEnemyCell = null;
-        updateActionButtons();
-        renderBoards();
-        return;
-      }
-
-      state.enemyAttacks.add(coordinate);
+      state.enemyAttacks.set(coordinate, "hit");
       state.selectedEnemyCell = null;
       statusTitle.innerText = "Attack logged";
-      statusNote.innerText = `Your attack on ${LETTERS[col]}${row + 1} is locked in. Wait for ${opponentName} to tell you the result, then confirm their attack on your own board.`;
+      statusNote.innerText = `Your attack on ${LETTERS[col]}${row + 1} is locked in. Tap it again later to switch between red and gray based on the result.`;
       updateActionButtons();
       renderBoards();
     }
@@ -818,7 +824,7 @@
       state.selectedShipId = SHIPS[0].id;
       state.selectedOwnCell = null;
       state.selectedEnemyCell = null;
-      state.enemyAttacks = new Set();
+      state.enemyAttacks = new Map();
       state.enemyAttackMisses = new Set();
       state.gameOverShown = false;
       winnerText.innerText = "";
@@ -961,6 +967,9 @@
 
           if (state.enemyAttacks.has(coordinate)) {
             enemyCell.classList.add("logged-attack");
+            if (state.enemyAttacks.get(coordinate) === "miss") {
+              enemyCell.classList.add("missed-attack");
+            }
           }
 
           if (state.selectedEnemyCell && state.selectedEnemyCell.row === row && state.selectedEnemyCell.col === col) {
