@@ -272,6 +272,31 @@
       box-shadow: inset 0 0 0 1px rgba(255, 240, 220, 0.1);
     }
 
+    .cell.guide-line {
+      background:
+        linear-gradient(180deg, rgba(255, 179, 122, 0.2), rgba(45, 101, 145, 0.3)),
+        rgba(7, 20, 36, 0.92);
+      border-color: rgba(255, 186, 136, 0.18);
+    }
+
+    .cell.ship.guide-line {
+      background:
+        linear-gradient(180deg, rgba(255, 179, 122, 0.22), rgba(55, 117, 163, 0.9)),
+        rgba(7, 20, 36, 0.92);
+    }
+
+    .cell.logged-attack.guide-line {
+      background:
+        linear-gradient(180deg, rgba(255, 166, 108, 0.34), rgba(150, 43, 40, 0.94)),
+        rgba(7, 20, 36, 0.92);
+    }
+
+    .cell.logged-attack.missed-attack.guide-line {
+      background:
+        linear-gradient(180deg, rgba(224, 179, 136, 0.24), rgba(82, 94, 115, 0.94)),
+        rgba(7, 20, 36, 0.92);
+    }
+
     .sidebar {
       display: grid;
       gap: 16px;
@@ -937,6 +962,9 @@
       createBoardGrid(ownBoard, placeShip);
       createBoardGrid(enemyBoard, selectEnemyCell);
 
+      const ownGuide = state.selectedOwnCell;
+      const enemyGuide = state.selectedEnemyCell;
+
       for (let row = 0; row < GRID_SIZE; row += 1) {
         for (let col = 0; col < GRID_SIZE; col += 1) {
           const ownCell = ownBoard.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
@@ -961,6 +989,10 @@
             ownCell.classList.add("logged-attack");
           }
 
+          if (ownGuide && (ownGuide.row === row || ownGuide.col === col)) {
+            ownCell.classList.add("guide-line");
+          }
+
           if (state.selectedOwnCell && state.selectedOwnCell.row === row && state.selectedOwnCell.col === col) {
             ownCell.classList.add("selected-target");
           }
@@ -970,6 +1002,10 @@
             if (state.enemyAttacks.get(coordinate) === "miss") {
               enemyCell.classList.add("missed-attack");
             }
+          }
+
+          if (enemyGuide && (enemyGuide.row === row || enemyGuide.col === col)) {
+            enemyCell.classList.add("guide-line");
           }
 
           if (state.selectedEnemyCell && state.selectedEnemyCell.row === row && state.selectedEnemyCell.col === col) {
